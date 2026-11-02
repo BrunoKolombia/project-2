@@ -30,4 +30,8 @@ void loadMovies(vector<Movie>& movies);
 void loadRatings(vector<Rating>& ratings);
 void calculateAverageRatings(vector<Movie>& movies, const vector<Rating>& ratings);
 vector<Movie> searchMovies(const vector<Movie>& movies, const string& searchTerm);
+void displayMovieInfo(const Movie& movie);
+// allows users to select their favorite genres
+vector<string> selectFavoriteGenres();
+
 #endif

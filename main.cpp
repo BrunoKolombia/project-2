@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include "movies.h"
 using namespace std;
@@ -53,11 +52,35 @@ int main() {
     if (!searchResults.empty()) {
         cout << "\nSearch Results:" << endl;
 
-        for (const Movie& movie : searchResults) {
-            cout << movie.title << " (" << movie.releaseYear << ")" << endl;
+        for (int i = 0; i < searchResults.size(); i++) {
+            cout << i + 1 << ". " << searchResults[i].title
+                 << " (" << searchResults[i].releaseYear << ")" << endl;
         }
+
+        // allows users to select a movie
+        int selection;
+
+        cout << "\nSelect a movie to view its information: ";
+        cin >> selection;
+
+        if (selection >= 1 && selection <= searchResults.size()) {
+            displayMovieInfo(searchResults[selection - 1]);
+        } else {
+            cout << "Invalid selection." << endl;
+        }
+
     } else {
         cout << "No matching movies found." << endl;
+    }
+
+    // allows users to select their favorite genres
+    vector<string> favoriteGenres = selectFavoriteGenres();
+
+    // displays the user's selected genres
+    cout << "\nYour Favorite Genres:" << endl;
+
+    for (const string& genre : favoriteGenres) {
+        cout << genre << endl;
     }
 
     return 0;

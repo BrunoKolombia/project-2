@@ -146,3 +146,51 @@ vector<Movie> searchMovies(const vector<Movie>& movies, const string& searchTerm
 
     return searchResults;
 }
+
+void displayMovieInfo(const Movie& movie) {
+    cout << "\nMovie Information:" << endl;
+    cout << "Movie ID: " << movie.movieID << endl;
+    cout << "Title: " << movie.title << endl;
+    cout << "Release Year: " << movie.releaseYear << endl;
+
+    cout << "Genres: ";
+    for (const string& genre : movie.genres) {
+        cout << genre << " ";
+    }
+    cout << endl;
+
+    cout << "Average Rating: " << movie.averageRating << endl;
+}
+// allows users to select their favorite genres
+vector<string> selectFavoriteGenres() {
+    vector<string> favoriteGenres;
+
+    vector<string> availableGenres = {
+        "Action", "Adventure", "Animation", "Children's",
+        "Comedy", "Crime", "Documentary", "Drama",
+        "Fantasy", "Film-Noir", "Horror", "Musical",
+        "Mystery", "Romance", "Sci-Fi", "Thriller",
+        "War", "Western"
+    };
+
+    cout << "\nAvailable Genres:" << endl;
+
+    for (int i = 0; i < availableGenres.size(); i++) {
+        cout << i + 1 << ". " << availableGenres[i] << endl;
+    }
+
+    cout << "\nEnter the numbers of your favorite genres (0 to finish):" << endl;
+
+    int selection;
+
+    while (cin >> selection && selection != 0) {
+        if (selection >= 1 && selection <= availableGenres.size()) {
+            favoriteGenres.push_back(availableGenres[selection - 1]);
+            cout << availableGenres[selection - 1] << " added!" << endl;
+        } else {
+            cout << "Invalid selection. Please try again." << endl;
+        }
+    }
+
+    return favoriteGenres;
+}
