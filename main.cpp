@@ -1,5 +1,13 @@
 #include <iostream>
 #include "movies.h"
+#include "recommendations.h"
+#include <chrono>
+#include <iomanip>
+#include <limits>
+#include <sstream>
+#include <unordered_map>
+#include <algorithm>
+
 using namespace std;
 
 int main() {
@@ -26,7 +34,6 @@ int main() {
             cout << genre << " ";
         }
         cout << endl;
-
         cout << "Average Rating: " << movies[0].averageRating << endl;
     }
 
@@ -51,7 +58,6 @@ int main() {
     // displays the search results
     if (!searchResults.empty()) {
         cout << "\nSearch Results:" << endl;
-
         for (int i = 0; i < searchResults.size(); i++) {
             cout << i + 1 << ". " << searchResults[i].title
                  << " (" << searchResults[i].releaseYear << ")" << endl;
@@ -62,7 +68,6 @@ int main() {
 
         cout << "\nSelect a movie to view its information: ";
         cin >> selection;
-
         if (selection >= 1 && selection <= searchResults.size()) {
             displayMovieInfo(searchResults[selection - 1]);
         } else {
@@ -81,6 +86,357 @@ int main() {
 
     for (const string& genre : favoriteGenres) {
         cout << genre << endl;
+    }
+
+    // checks that movie and rating data loaded
+    if (movies.empty() || ratings.empty()) {
+        cout << "Cannot generate recommendations." << endl;
+        return 1;
+    }
+
+    // store user preferences
+    Preferences preferences;
+    preferences.genres = favoriteGenres;
+
+    // store the IDs of the user's favorite movies
+    vector<int> favoriteIDs;
+
+    // map movie IDs to their corresponding movies
+    // provides fast access to movie information
+    unordered_map<int, const Movie*> movieLookup;
+
+    for (const Movie& movie : movies) {
+        movieLookup[movie.movieID] = &movie;
+    }
+
+    // clear remaining input from earlier selections
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    // helper function for reading valid integers
+    auto readInteger = [](const string& prompt,
+                          int minimum,
+                          int maximum) {
+        int value;
+        string input;
+
+        while (true) {
+            cout << prompt;
+            if (!getline(cin, input)) {
+                return minimum;
+            }
+
+            stringstream stream(input);
+            char extra;
+
+            if ((stream >> value) &&
+                !(stream >> extra) &&
+                value >= minimum &&
+                value <= maximum) {
+                return value;
+            }
+
+            cout << "Invalid input. Try again." << endl;
+        }
+    };
+
+    // helper function for displaying recommendations
+    auto displayRecommendations =
+        [&](const vector<Recommendation>& results) {
+
+        if (results.empty()) {
+            cout << "\nNo recommendations found." << endl;
+            return;
+        }
+
+        cout << "\nRecommended Movies:" << endl;
+
+        for (int i = 0; i < results.size(); i++) {
+            const Recommendation& recommendation = results[i];
+
+            auto it = movieLookup.find(recommendation.movieID);
+
+            if (it == movieLookup.end()) {
+                continue;
+            }
+
+            const Movie& movie = *(it->second);
+
+            cout << "\n" << i + 1 << ". " << movie.title
+                 << " (" << movie.releaseYear << ")" << endl;
+
+            cout << "Average Rating: "
+                 << fixed << setprecision(2)
+                 << movie.averageRating << endl;
+
+            cout << "Recommendation Score: "
+                 << recommendation.score << endl;
+
+            cout << "Reason: "
+                 << recommendation.reason << endl;
+        }
+    };
+
+    // interactive recommendation menu
+    int choice = -1;
+
+    while (choice != 0) {
+
+        cout << "\n========== CINEMATCH ==========" << endl;
+        cout << "1. Search and add favorite movies" << endl;
+        cout << "2. Update favorite genres" << endl;
+        cout << "3. Set rating and year preferences" << endl;
+        cout << "4. Content-Based Recommendations" << endl;
+        cout << "5. Collaborative Filtering Recommendations" << endl;
+        cout << "6. Compare Both Algorithms" << endl;
+        cout << "7. View Favorite Movies" << endl;
+        cout << "0. Exit" << endl;
+        cout << "================================" << endl;
+
+        choice = readInteger("Enter your choice: ", 0, 7);
+
+        // search for and select favorite movies
+        if (choice == 1) {
+
+            string title;
+
+            cout << "\nEnter a movie title: ";
+            getline(cin, title);
+
+            vector<Movie> results = searchMovies(movies, title);
+
+            if (results.empty()) {
+                cout << "No matching movies found." << endl;
+                continue;
+            }
+
+            cout << "\nSearch Results:" << endl;
+
+            for (int i = 0; i < results.size(); i++) {
+                cout << i + 1 << ". " << results[i].title
+                     << " (" << results[i].releaseYear << ")"
+                     << endl;
+            }
+
+            int selection = readInteger(
+                "\nSelect a movie to add (0 to cancel): ",
+                0,
+                static_cast<int>(results.size())
+            );
+
+            if (selection == 0) {
+                continue;
+            }
+
+            int movieID = results[selection - 1].movieID;
+
+            // prevent duplicate favorites
+            if (find(favoriteIDs.begin(),
+                     favoriteIDs.end(),
+                     movieID) == favoriteIDs.end()) {
+
+                favoriteIDs.push_back(movieID);
+
+                cout << results[selection - 1].title
+                     << " added to favorites!" << endl;
+
+            } else {
+                cout << "Movie is already in favorites." << endl;
+            }
+        }
+
+        // update selected genres
+        else if (choice == 2) {
+
+            preferences.genres = selectFavoriteGenres();
+
+            cout << "\nUpdated Favorite Genres:" << endl;
+
+            for (const string& genre : preferences.genres) {
+                cout << genre << endl;
+            }
+
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+
+        // set rating and release year filters
+        else if (choice == 3) {
+
+            preferences.minRating = readInteger(
+                "\nMinimum average rating (0-5): ", 0, 5
+            );
+
+            preferences.minYear = readInteger(
+                "Minimum release year (0-2100): ", 0, 2100
+            );
+
+            preferences.maxYear = readInteger(
+                "Maximum release year: ",
+                preferences.minYear,
+                2100
+            );
+
+            cout << "\nPreferences updated!" << endl;
+        }
+
+        // run content-based filtering
+        else if (choice == 4) {
+
+            cout << "\nRunning Content-Based Filtering..."
+                 << endl;
+
+            auto start = chrono::steady_clock::now();
+
+            vector<Recommendation> results =
+                contentBasedRecommendations(
+                    movies,
+                    preferences,
+                    favoriteIDs
+                );
+
+            auto finish = chrono::steady_clock::now();
+
+            displayRecommendations(results);
+
+            double elapsedTime =
+                chrono::duration<double, milli>(
+                    finish - start
+                ).count();
+
+            cout << "\nExecution Time: "
+                 << elapsedTime << " ms" << endl;
+        }
+
+        // run collaborative filtering
+        else if (choice == 5) {
+
+            if (favoriteIDs.empty()) {
+                cout << "\nSelect at least one favorite movie first."
+                     << endl;
+                continue;
+            }
+
+            cout << "\nRunning Collaborative Filtering..."
+                 << endl;
+
+            auto start = chrono::steady_clock::now();
+
+            vector<Recommendation> results =
+                collaborativeRecommendations(
+                    movies,
+                    ratings,
+                    preferences,
+                    favoriteIDs
+                );
+
+            auto finish = chrono::steady_clock::now();
+
+            displayRecommendations(results);
+
+            double elapsedTime =
+                chrono::duration<double, milli>(
+                    finish - start
+                ).count();
+
+            cout << "\nExecution Time: "
+                 << elapsedTime << " ms" << endl;
+        }
+
+        // compare both recommendation algorithms
+        else if (choice == 6) {
+
+            if (favoriteIDs.empty()) {
+                cout << "\nSelect at least one favorite movie first."
+                     << endl;
+                continue;
+            }
+
+            cout << "\n===== ALGORITHM COMPARISON =====" << endl;
+
+            auto start1 = chrono::steady_clock::now();
+
+            vector<Recommendation> contentResults =
+                contentBasedRecommendations(
+                    movies,
+                    preferences,
+                    favoriteIDs
+                );
+
+            auto finish1 = chrono::steady_clock::now();
+
+            cout << "\nCONTENT-BASED FILTERING" << endl;
+            displayRecommendations(contentResults);
+
+            auto start2 = chrono::steady_clock::now();
+
+            vector<Recommendation> collaborativeResults =
+                collaborativeRecommendations(
+                    movies,
+                    ratings,
+                    preferences,
+                    favoriteIDs
+                );
+
+            auto finish2 = chrono::steady_clock::now();
+
+            cout << "\nCOLLABORATIVE FILTERING" << endl;
+            displayRecommendations(collaborativeResults);
+
+            double contentTime =
+                chrono::duration<double, milli>(
+                    finish1 - start1
+                ).count();
+
+            double collaborativeTime =
+                chrono::duration<double, milli>(
+                    finish2 - start2
+                ).count();
+
+            cout << "\n===== PERFORMANCE RESULTS =====" << endl;
+
+            cout << "Content-Based: "
+                 << contentTime << " ms" << endl;
+
+            cout << "Collaborative Filtering: "
+                 << collaborativeTime << " ms" << endl;
+
+            if (contentTime < collaborativeTime) {
+                cout << "Content-Based Filtering was faster."
+                     << endl;
+            } else if (collaborativeTime < contentTime) {
+                cout << "Collaborative Filtering was faster."
+                     << endl;
+            } else {
+                cout << "Both algorithms took the same time."
+                     << endl;
+            }
+        }
+
+        // display currently selected favorite movies
+        else if (choice == 7) {
+
+            if (favoriteIDs.empty()) {
+                cout << "\nNo favorite movies selected." << endl;
+                continue;
+            }
+
+            cout << "\nYour Favorite Movies:" << endl;
+
+            for (int movieID : favoriteIDs) {
+
+                auto it = movieLookup.find(movieID);
+
+                if (it != movieLookup.end()) {
+                    cout << "- " << it->second->title << endl;
+                }
+            }
+        }
+
+        else if (choice == 0) {
+            cout << "\nThank you for using CineMatch!"
+                 << endl;
+        }
     }
 
     return 0;
