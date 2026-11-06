@@ -7,6 +7,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <algorithm>
+#include "interface.h"
 
 using namespace std;
 
@@ -181,6 +182,8 @@ int main() {
     int choice = -1;
 
     while (choice != 0) {
+        // Show selected preferences before displaying menu
+        cinePrintPreferences(preferences, favoriteIDs);
 
         cout << "\n========== CINEMATCH ==========" << endl;
         cout << "1. Search and add favorite movies" << endl;
@@ -190,10 +193,13 @@ int main() {
         cout << "5. Collaborative Filtering Recommendations" << endl;
         cout << "6. Compare Both Algorithms" << endl;
         cout << "7. View Favorite Movies" << endl;
+        cout << "8. Benchmark Dataset Sizes" << endl;
+        cout << "9. Remove a Favorite Movie" << endl;
+        cout << "10. Reset Favorites and Preferences" << endl;
         cout << "0. Exit" << endl;
         cout << "================================" << endl;
 
-        choice = readInteger("Enter your choice: ", 0, 7);
+        choice = readInteger("Enter your choice: ", 0, 10);
 
         // search for and select favorite movies
         if (choice == 1) {
@@ -411,6 +417,13 @@ int main() {
                 cout << "Both algorithms took the same time."
                      << endl;
             }
+
+            // detailed performance metrics and recommendation comparisons
+            cinePrintDetailedComparison(
+                movies, ratings, preferences, favoriteIDs,
+                contentResults, collaborativeResults, movieLookup
+            );
+
         }
 
         // display currently selected favorite movies
@@ -430,6 +443,47 @@ int main() {
                 if (it != movieLookup.end()) {
                     cout << "- " << it->second->title << endl;
                 }
+            }
+        }
+        // benchmark algorithms with different amounts of historical ratings
+        else if (choice == 8) {
+            cineBenchmarkDatasetSizes(movies, ratings, preferences, favoriteIDs);
+        }
+
+        // remove one of the user's selected favorite movies
+        else if (choice == 9) {
+            if (favoriteIDs.empty()) {
+                cout << "No favorite movies to remove." << endl;
+                continue;
+            }
+
+            cout << "\nSelected Favorite Movies:" << endl;
+            for (size_t i = 0; i < favoriteIDs.size(); ++i) {
+                auto found = movieLookup.find(favoriteIDs[i]);
+                if (found != movieLookup.end()) {
+                    cout << i + 1 << ". " << found->second->title << endl;
+                }
+            }
+
+            int selection = readInteger(
+                "Enter number to remove (0 to cancel): ",
+                0, static_cast<int>(favoriteIDs.size())
+            );
+            if (selection != 0) {
+                favoriteIDs.erase(favoriteIDs.begin() + selection - 1);
+                cout << "Favorite removed." << endl;
+            }
+        }
+
+        // reset saved preferences and favorites after confirmation
+        else if (choice == 10) {
+            int confirm = readInteger(
+                "Reset everything? 1 = Yes, 0 = No: ", 0, 1
+            );
+            if (confirm == 1) {
+                favoriteIDs.clear();
+                preferences = Preferences{};
+                cout << "Favorites and preferences reset." << endl;
             }
         }
 

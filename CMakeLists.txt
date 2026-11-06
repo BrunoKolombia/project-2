@@ -7,4 +7,5 @@ add_executable(CineMatch
         main.cpp
         movies.cpp
         recommendations.cpp
+        interface.h
 )
